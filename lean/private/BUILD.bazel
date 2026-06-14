@@ -1,0 +1,12 @@
+package(default_visibility = ["//lean:__subpackages__"])
+
+# Orchestration scripts, written in Lean and run via the toolchain's own `lean --run`.
+exports_files([
+    "elaborate.lean",
+    "link.lean",
+])
+
+filegroup(
+    name = "bzl_files",
+    srcs = glob(["*.bzl"]),
+)
