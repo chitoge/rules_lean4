@@ -1,0 +1,23 @@
+load("@rules_cc//cc:defs.bzl", "cc_library")
+load("@rules_lean4//lean:defs.bzl", "lean_cc_test", "lean_library")
+
+# The Lean library whose `@[export]`ed function C++ will call.
+lean_library(
+    name = "square",
+    srcs = ["Square.lean"],
+)
+
+# Reverse FFI (C++ -> Lean). The C++ main is a cc_library compiled with your own cc toolchain (using
+# the Lean headers via //lean:headers); lean_cc_test links it against the Lean library.
+cc_library(
+    name = "main_cc",
+    srcs = ["main.cpp"],
+    deps = ["@rules_lean4//lean:headers"],
+)
+
+lean_cc_test(
+    name = "reverse_ffi_test",
+    size = "small",
+    cc_deps = [":main_cc"],
+    deps = [":square"],
+)

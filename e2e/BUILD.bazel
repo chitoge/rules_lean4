@@ -1,0 +1,18 @@
+load("@bazel_skylib//rules:build_test.bzl", "build_test")
+load("@renamed_lean//lean:defs.bzl", "lean_test")
+
+# A real downstream build: a lean_test that links a library added from a git tag.
+lean_test(
+    name = "consumer_test",
+    size = "medium",
+    srcs = ["Main.lean"],
+    deps = ["@leancremental//:Leancremental"],
+)
+
+# Build the prebuilt-olean repo created via use_repo_rule: its generated BUILD must load rules_lean4
+# by canonical label (this module renames the repo) and its olean glob must allow_empty. Building
+# the target checks both; it is not imported (it has no oleans).
+build_test(
+    name = "olean_archive_build_test",
+    targets = ["@empty_oleans//:oleans"],
+)

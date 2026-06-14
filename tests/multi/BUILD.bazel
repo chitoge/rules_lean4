@@ -1,0 +1,34 @@
+load("@rules_lean4//lean:defs.bzl", "lean_binary", "lean_test")
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
+
+_SRCS = [
+    "Base.lean",
+    "Left.lean",
+    "Right.lean",
+    "Main.lean",
+]
+
+# A library with a diamond intra-package import graph (Main -> {Left, Right} -> Base), built as one
+# action whose orchestrator must topo-sort the modules. The program asserts the computed value.
+lean_test(
+    name = "multi_test",
+    size = "small",
+    srcs = _SRCS,
+)
+
+lean_binary(
+    name = "multi",
+    srcs = _SRCS,
+)
+
+# Golden: run the binary and assert its stdout.
+sh_test(
+    name = "multi_stdout_test",
+    size = "small",
+    srcs = ["//tests:golden_check.sh"],
+    args = [
+        "$(rootpath :multi)",
+        "left + right = 112",
+    ],
+    data = [":multi"],
+)

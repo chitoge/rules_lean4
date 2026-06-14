@@ -1,0 +1,25 @@
+load("@rules_lean4//lean:defs.bzl", "lean_binary", "lean_library")
+
+# Targets that MUST fail to build. Tagged manual so they're excluded from wildcard builds; the
+# accompanying expect_failures.sh (run in CI) asserts that each one fails.
+
+# False theorem -> elaboration rejects it.
+lean_library(
+    name = "bad_proof",
+    srcs = ["BadProof.lean"],
+    tags = ["manual"],
+)
+
+# Import of an undeclared module -> elaboration fails.
+lean_library(
+    name = "missing_import",
+    srcs = ["MissingImport.lean"],
+    tags = ["manual"],
+)
+
+# @[extern] with no C implementation -> link fails (undefined symbol).
+lean_binary(
+    name = "undefined_extern",
+    srcs = ["UndefinedExtern.lean"],
+    tags = ["manual"],
+)

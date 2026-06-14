@@ -1,0 +1,65 @@
+"""rules_lean4 — Bazel rules for building Lean 4 projects with a hermetic toolchain."""
+
+module(
+    name = "rules_lean4",
+    version = "0.1.0",
+    bazel_compatibility = [">=9.0.0"],  # loads CcInfo/cc_common from rules_cc (moved out of globals in 9.x)
+)
+
+bazel_dep(name = "platforms", version = "0.0.10")
+bazel_dep(name = "bazel_skylib", version = "1.7.1")
+bazel_dep(name = "rules_cc", version = "0.2.12")  # first with the Bazel-9 cc_common compatibility proxy
+
+# The `lean` extension provides a hermetic, pinned-by-checksum Lean toolchain (no host/elan
+# dependency). Per-platform release tarballs are selected by the worker's platform, so the same
+# build is reproducible locally and on a (possibly different-arch) RBE worker.
+lean = use_extension("//lean:extensions.bzl", "lean")
+lean.toolchain(version = "4.30.0")  # pin matches //:lean-toolchain
+use_repo(lean, "lean_toolchains")
+
+register_toolchains("@lean_toolchains//:all")
+
+# FFI C/C++ sources are compiled with the configured Bazel C++ toolchain. Consumers register their
+# own; for this repo's examples/tests we register a hermetic LLVM toolchain (dev-only).
+bazel_dep(name = "toolchains_llvm", version = "1.8.0", dev_dependency = True)
+bazel_dep(name = "rules_shell", version = "0.5.0", dev_dependency = True)  # sh_test for golden-output tests
+bazel_dep(name = "stardoc", version = "0.8.0", dev_dependency = True)  # API doc generation (//docs)
+
+llvm = use_extension("@toolchains_llvm//toolchain/extensions:llvm.bzl", "llvm", dev_dependency = True)
+llvm.toolchain(llvm_version = "19.1.0")
+use_repo(llvm, "llvm_toolchain")
+
+register_toolchains(
+    "@llvm_toolchain//:all",
+    dev_dependency = True,
+)
+
+# Load external Lake dependencies from a manifest (used by //tests/dep). Consumers use the same
+# extension in their own MODULE.bazel pointing at their lake-manifest.json.
+lake = use_extension("//lean:deps.bzl", "lake", dev_dependency = True)
+lake.from_manifest(
+    manifest = "//tests/dep:lake-manifest.json",
+    sha256 = {
+        "importGraph": "13f4ac429fb98c16d509ad13215a26ea82df17b626b45ac0ef3da315b92bddfe",
+        "Cli": "3870c43085c497cd1bb5fe89be52ff97c04f6a8fe7bb9722fead17b935fc18a9",
+    },
+)
+
+# A second manifest (//tests/lake_toml) loads Leancremental v0.4.1 through the same lakefile.toml
+# path — a single package whose library name (Leancremental) differs from its package name.
+lake.from_manifest(
+    manifest = "//tests/lake_toml:lake-manifest.json",
+    sha256 = {"leancremental": "be28551e0f35f05098df432692b318fe217ce65c614c2b988bd8cf2153ad6b76"},
+)
+use_repo(lake, "lean_pkg_Cli", "lean_pkg_importGraph", "lean_pkg_leancremental")
+
+# Add a Lean library straight from a git tag (used by //tests/git_dep). The fetch is delegated to
+# Bazel's new_git_repository; we build it from source with no lakefile parsing, so it works even
+# though Leancremental ships a programmatic lakefile.lean.
+lean_git = use_extension("//lean:deps.bzl", "lean_git", dev_dependency = True)
+lean_git.repository(
+    name = "leancremental",
+    remote = "https://github.com/chitoge/Leancremental",
+    tag = "v0.3.0",
+)
+use_repo(lean_git, "leancremental")

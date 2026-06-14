@@ -1,0 +1,1 @@
+def right := 0

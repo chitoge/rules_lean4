@@ -1,0 +1,4 @@
+# Direct deps are pinned to their lowest working versions (the minimum floor we impose on consumers).
+# The dev-only toolchains_llvm resolves them higher in *our* build (consumers don't inherit dev deps),
+# which would otherwise warn — so we disable the direct-dependency version nag.
+common --check_direct_dependencies=off

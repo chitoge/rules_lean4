@@ -1,0 +1,20 @@
+load("@bazel_skylib//:bzl_library.bzl", "bzl_library")
+load("//lean:defs.bzl", "lean_cc_headers")
+
+package(default_visibility = ["//visibility:public"])
+
+# The toolchain type that the Lean rules resolve against.
+toolchain_type(name = "toolchain_type")
+
+# Lean's C headers (lean.h, ...) as a CcInfo — depend a cc_library on this to write FFI.
+lean_cc_headers(name = "headers")
+
+# All Starlark sources, for downstream bzl_library consumers / stardoc.
+bzl_library(
+    name = "defs",
+    srcs = glob(["*.bzl"]) + ["//lean/private:bzl_files"],
+    deps = [
+        "@rules_cc//cc:find_cc_toolchain_bzl",
+        "@rules_cc//cc/common",
+    ],
+)

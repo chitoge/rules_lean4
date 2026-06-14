@@ -1,0 +1,14 @@
+load("@bazel_skylib//rules:build_test.bzl", "build_test")
+load("@rules_lean4//lean:defs.bzl", "lean_library")
+
+# Example: machine-checked proofs. Elaboration fails if any proof is wrong.
+lean_library(
+    name = "proofs",
+    srcs = ["Proof.lean"],
+)
+
+# Building the library checks the proofs; build_test makes that a test target.
+build_test(
+    name = "proof_test",
+    targets = [":proofs"],
+)

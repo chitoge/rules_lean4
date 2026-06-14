@@ -1,0 +1,82 @@
+load("@rules_lean4//lean:defs.bzl", "lean_binary", "lean_library")
+load(":analysis_test.bzl", "bad_deps_test", "binary_actions_test", "ffi_action_test", "propagation_test")
+
+# Targets under test (analysis only — tagged manual so wildcard builds don't compile them).
+_TUT = ["manual"]
+
+lean_library(
+    name = "base",
+    srcs = ["base.lean"],
+    tags = _TUT,
+)
+
+lean_library(
+    name = "left",
+    srcs = ["left.lean"],
+    tags = _TUT,
+    deps = [":base"],
+)
+
+lean_library(
+    name = "right",
+    srcs = ["right.lean"],
+    tags = _TUT,
+    deps = [":base"],
+)
+
+# Diamond: top -> {left, right} -> base.
+lean_library(
+    name = "top",
+    srcs = ["top.lean"],
+    tags = _TUT,
+    deps = [
+        ":left",
+        ":right",
+    ],
+)
+
+lean_binary(
+    name = "bin",
+    srcs = ["Main.lean"],
+    tags = _TUT,
+)
+
+lean_library(
+    name = "ffi",
+    srcs = ["ffi.lean"],
+    ffi_srcs = ["z.c"],
+    tags = _TUT,
+)
+
+filegroup(
+    name = "not_lean",
+    srcs = ["base.lean"],
+)
+
+lean_library(
+    name = "bad",
+    srcs = ["base.lean"],
+    tags = _TUT,
+    deps = [":not_lean"],
+)
+
+# Tests.
+propagation_test(
+    name = "propagation_test",
+    target_under_test = ":top",
+)
+
+binary_actions_test(
+    name = "binary_actions_test",
+    target_under_test = ":bin",
+)
+
+ffi_action_test(
+    name = "ffi_action_test",
+    target_under_test = ":ffi",
+)
+
+bad_deps_test(
+    name = "bad_deps_test",
+    target_under_test = ":bad",
+)

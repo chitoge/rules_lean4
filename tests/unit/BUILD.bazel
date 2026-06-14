@@ -1,0 +1,5 @@
+load(":unit_test.bzl", "unit_test_suite")
+
+# Pure-Starlark unit tests (lakefile parsing, BUILD generation, distribution resolution).
+# No Lean or C++ toolchain required.
+unit_test_suite(name = "unit")

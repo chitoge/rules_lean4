@@ -1,0 +1,6 @@
+# Bazel convenience symlinks (root and nested modules like e2e/)
+/bazel-*
+/e2e/bazel-*
+
+# Bazel disk/repository cache populated under the project dir in CI
+/.cache/

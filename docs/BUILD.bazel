@@ -1,0 +1,11 @@
+load("@stardoc//stardoc:stardoc.bzl", "stardoc")
+
+# Generates Markdown API docs from the public rules. Building this in CI asserts the .bzl API is
+# documentable (no doc/signature errors). Kept in its own package so the stardoc dev-dependency is
+# never loaded by consumers of the ruleset.
+stardoc(
+    name = "api",
+    out = "api.md",
+    input = "//lean:defs.bzl",
+    deps = ["//lean:defs"],
+)

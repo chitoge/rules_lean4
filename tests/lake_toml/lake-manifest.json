@@ -1,0 +1,16 @@
+{"version": "1.2.0",
+ "packagesDir": ".lake/packages",
+ "packages":
+ [{"url": "https://github.com/chitoge/Leancremental",
+   "type": "git",
+   "subDir": null,
+   "scope": "chitoge",
+   "rev": "b42cd936e975c6fc51734ace8300a50f68b16c20",
+   "name": "leancremental",
+   "manifestFile": "lake-manifest.json",
+   "inputRev": "v0.4.1",
+   "inherited": false,
+   "configFile": "lakefile.toml"}],
+ "name": "lake_toml_example",
+ "lakeDir": ".lake",
+ "fixedToolchain": false}

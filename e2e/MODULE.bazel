@@ -1,0 +1,50 @@
+"""End-to-end consumer of rules_lean4, built as a separate Bazel module.
+
+Consumes rules_lean4 the way a downstream project does — through `bazel_dep` + a module extension,
+rather than the in-repo `@rules_lean4//` self-references the `//tests/...` suite uses. The repo is
+renamed (`repo_name = "renamed_lean"`) so any generated BUILD or label that assumes the apparent
+name `rules_lean4` is caught here.
+
+Run from this directory: `bazel test //...` (needs network: Lean toolchain + a git dependency).
+"""
+
+module(
+    name = "lean_e2e",
+    version = "0.0.0",
+)
+
+bazel_dep(name = "rules_lean4", version = "0.1.0", repo_name = "renamed_lean")
+local_path_override(
+    module_name = "rules_lean4",
+    path = "..",
+)
+
+bazel_dep(name = "bazel_skylib", version = "1.7.1")  # build_test
+
+# Hermetic Lean toolchain, set up exactly as a consumer would.
+lean = use_extension("@renamed_lean//lean:extensions.bzl", "lean")
+lean.toolchain(version = "4.30.0")
+use_repo(lean, "lean_toolchains")
+
+register_toolchains("@lean_toolchains//:all")
+
+# A library added straight from a git tag (the lean_git extension path).
+lean_git = use_extension("@renamed_lean//lean:deps.bzl", "lean_git")
+lean_git.repository(
+    name = "leancremental",
+    remote = "https://github.com/chitoge/Leancremental",
+    tag = "v0.3.0",
+)
+use_repo(lean_git, "leancremental")
+
+# The prebuilt-olean path, created via use_repo_rule (its generated BUILD resolves labels against
+# this module's mapping, where rules_lean4 is renamed). Pointed at a source tarball with no oleans,
+# so the olean glob matches nothing — building the target then checks the generated BUILD's
+# canonical-label load and allow_empty glob without a toolchain-version-pinned binary fixture.
+olean = use_repo_rule("@renamed_lean//lean:deps.bzl", "lean_olean_archive")
+
+olean(
+    name = "empty_oleans",
+    strip_prefix = "Leancremental-0.3.0",
+    urls = ["https://github.com/chitoge/Leancremental/archive/refs/tags/v0.3.0.tar.gz"],
+)

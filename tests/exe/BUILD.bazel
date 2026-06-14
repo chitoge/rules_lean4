@@ -1,0 +1,27 @@
+load("@rules_lean4//lean:defs.bzl", "lean_binary", "lean_test")
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
+
+# Example: build a native executable from Lean.
+lean_binary(
+    name = "fib",
+    srcs = ["Main.lean"],
+)
+
+# ...and prove it builds AND runs (the program asserts its own output; exit 0 = pass).
+lean_test(
+    name = "fib_test",
+    size = "small",
+    srcs = ["Main.lean"],
+)
+
+# Golden: run the built executable and assert its stdout.
+sh_test(
+    name = "fib_stdout_test",
+    size = "small",
+    srcs = ["//tests:golden_check.sh"],
+    args = [
+        "$(rootpath :fib)",
+        "fib 10 = 55",
+    ],
+    data = [":fib"],
+)

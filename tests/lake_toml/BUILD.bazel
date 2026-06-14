@@ -1,0 +1,14 @@
+load("@rules_lean4//lean:defs.bzl", "lean_test")
+
+# Example: load a package through the `lake` extension's lakefile.toml path. The extension reads this
+# package's lake-manifest.json (see MODULE.bazel), fetches Leancremental at the pinned rev, parses
+# its lakefile.toml, and generates a lean_library per [[lean_lib]]. We depend on the `Leancremental`
+# library (the package-name alias @lean_pkg_leancremental//:leancremental also resolves to it).
+lean_test(
+    name = "lake_toml_test",
+    size = "medium",
+    srcs = ["Main.lean"],
+    deps = ["@lean_pkg_leancremental//:Leancremental"],
+)
+
+exports_files(["lake-manifest.json"])

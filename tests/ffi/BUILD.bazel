@@ -1,0 +1,27 @@
+load("@rules_cc//cc:defs.bzl", "cc_library")
+load("@rules_lean4//lean:defs.bzl", "lean_test")
+
+# Forward FFI (Lean -> C). Two ways to bring the C in; running the program asserts the result.
+
+# 1) Bundled: the C is compiled with the Lean toolchain's own clang. No cc toolchain needed.
+lean_test(
+    name = "ffi_test",
+    size = "small",
+    srcs = ["FFI.lean"],
+    ffi_srcs = ["add.c"],
+)
+
+# 2) Configured cc: compile the C with your own cc toolchain (a cc_library, using the Lean headers
+#    via //lean:headers); Lean just links the resulting objects.
+cc_library(
+    name = "add_cc",
+    srcs = ["add.c"],
+    deps = ["@rules_lean4//lean:headers"],
+)
+
+lean_test(
+    name = "ffi_cc_deps_test",
+    size = "small",
+    srcs = ["FFI.lean"],
+    cc_deps = [":add_cc"],
+)

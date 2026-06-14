@@ -1,0 +1,14 @@
+load("@rules_lean4//lean:defs.bzl", "lean_test")
+
+# Example: depend on external Lake packages. The `lake` extension (see MODULE.bazel) reads this
+# package's lake-manifest.json, fetches import-graph and its transitive dependency lean4-cli at
+# their pinned revs, and generates a lean_library for each (wiring importGraph -> Cli). We depend on
+# importGraph via its package-name alias.
+lean_test(
+    name = "dep_test",
+    size = "small",
+    srcs = ["Main.lean"],
+    deps = ["@lean_pkg_importGraph//:importGraph"],
+)
+
+exports_files(["lake-manifest.json"])
