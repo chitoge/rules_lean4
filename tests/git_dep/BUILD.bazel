@@ -1,7 +1,7 @@
 load("@rules_lean4//lean:defs.bzl", "lean_test")
 
 # Example: depend on a Lean library fetched from a git tag. The `lean_git` extension (see
-# MODULE.bazel) fetches chitoge/Leancremental at v0.3.0 and builds it from source as
+# MODULE.bazel) fetches chitoge/Leancremental at v0.4.2 and builds it from source as
 # @leancremental//:Leancremental. Running this reproduces Leancremental's README quick example.
 lean_test(
     name = "git_dep_test",

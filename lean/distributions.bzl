@@ -30,6 +30,12 @@ _SHA256 = {
         "darwin-x86_64": "b38dd8a25b5b5096c6c9019e7ffaddbd91a23fcb5382753225e3314515768ca2",
         "darwin-aarch64": "072dca4a38fbc0d3cedb96fea886cc243b424f2bd16247596200b9a9ab93f0f5",
     },
+    "4.31.0": {
+        "linux-x86_64": "07a633cc8d9151cbc08825ea4cdda50d4b02a2c9cb852c0131b13046f49cad7f",
+        "linux-aarch64": "b1bf1d3c586b76cf4a86212a595d8b9edd99f438a41cce85d5780fa9347c811b",
+        "darwin-x86_64": "6dac7a8f9d6d0bc339b4ea9376c06a88f3fd1a7f462beb3c7ded9fbc934f3fb5",
+        "darwin-aarch64": "264105500c8abdf37b68ffe03390a783ed259807807222698da8dd92d6ce0a27",
+    },
 }
 
 def distribution(version, platform, extra = None):

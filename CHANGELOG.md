@@ -3,6 +3,12 @@
 All notable changes to `rules_lean4` are documented here. This project adheres to
 [Semantic Versioning](https://semver.org).
 
+## Unreleased
+
+- Default Lean toolchain is now **4.31.0** (4.30.0 remains checksum-pinned and selectable). Because
+  Lean has no cross-version source/olean compatibility, the example dependencies were bumped to
+  their 4.31 releases: import-graph `v4.31.0`, lean4-cli `v4.31.0`, Leancremental `v0.4.2`.
+
 ## 0.1.0
 
 Initial release.

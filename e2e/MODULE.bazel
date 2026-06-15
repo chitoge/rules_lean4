@@ -23,7 +23,7 @@ bazel_dep(name = "bazel_skylib", version = "1.7.1")  # build_test
 
 # Hermetic Lean toolchain, set up exactly as a consumer would.
 lean = use_extension("@renamed_lean//lean:extensions.bzl", "lean")
-lean.toolchain(version = "4.30.0")
+lean.toolchain(version = "4.31.0")
 use_repo(lean, "lean_toolchains")
 
 register_toolchains("@lean_toolchains//:all")
@@ -33,7 +33,7 @@ lean_git = use_extension("@renamed_lean//lean:deps.bzl", "lean_git")
 lean_git.repository(
     name = "leancremental",
     remote = "https://github.com/chitoge/Leancremental",
-    tag = "v0.3.0",
+    tag = "v0.4.2",
 )
 use_repo(lean_git, "leancremental")
 
@@ -45,6 +45,6 @@ olean = use_repo_rule("@renamed_lean//lean:deps.bzl", "lean_olean_archive")
 
 olean(
     name = "empty_oleans",
-    strip_prefix = "Leancremental-0.3.0",
-    urls = ["https://github.com/chitoge/Leancremental/archive/refs/tags/v0.3.0.tar.gz"],
+    strip_prefix = "Leancremental-0.4.2",
+    urls = ["https://github.com/chitoge/Leancremental/archive/refs/tags/v0.4.2.tar.gz"],
 )

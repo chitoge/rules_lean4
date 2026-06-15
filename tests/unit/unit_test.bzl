@@ -98,6 +98,11 @@ def _distribution_cases(ctx):
     urls2, _, strip2 = distribution("4.30.0", "darwin-aarch64")
     asserts.true(env, urls2[0].endswith("lean-4.30.0-darwin_aarch64.tar.zst"), "darwin arm url")
     asserts.equals(env, "lean-4.30.0-darwin_aarch64", strip2)
+
+    # 4.31.0 is a supported, checksum-pinned version on every platform.
+    for plat in ["linux-x86_64", "linux-aarch64", "darwin-x86_64", "darwin-aarch64"]:
+        _urls, sha431, _strip = distribution("4.31.0", plat)
+        asserts.equals(env, 64, len(sha431), "4.31.0 %s has a pinned sha256" % plat)
     return unittest.end(env)
 
 _parse_basic_test = unittest.make(_parse_basic)

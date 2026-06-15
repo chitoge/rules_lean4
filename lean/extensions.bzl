@@ -7,7 +7,7 @@ version; the extension resolves the per-platform URLs and checksums.
 
 The toolchain is always a pinned, checksummed download — no host/elan dependency — so builds are
 hermetic and identical across machines (incl. RBE). Two ways to point it:
-  * by version (default): `lean.toolchain(version = "4.30.0")` — per-platform release tarballs.
+  * by version (default): `lean.toolchain(version = "4.31.0")` — per-platform release tarballs.
   * custom URL:           `lean.toolchain(version, urls = {...}, sha256 = {...})`.
 """
 
@@ -15,7 +15,7 @@ load(":distributions.bzl", "PLATFORMS", "distribution")
 load(":repositories.bzl", "lean_download_toolchain_repository")
 
 _toolchain_tag = tag_class(attrs = {
-    "version": attr.string(default = "4.30.0", doc = "Lean version; should match //:lean-toolchain."),
+    "version": attr.string(default = "4.31.0", doc = "Lean version; should match //:lean-toolchain."),
     "urls": attr.string_list_dict(doc = "Optional per-platform URL override (platform -> [urls])."),
     "sha256": attr.string_dict(doc = "Optional per-platform sha256 override."),
     "strip_prefix": attr.string_dict(doc = "Optional per-platform strip_prefix override."),
@@ -41,7 +41,7 @@ _lean_toolchains_hub = repository_rule(
 
 def _lean_impl(mctx):
     # Last-write-wins across the dep graph (root module's tags come last → take precedence).
-    version = "4.30.0"
+    version = "4.31.0"
     urls_override = {}
     sha_override = {}
     strip_override = {}

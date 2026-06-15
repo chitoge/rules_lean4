@@ -14,7 +14,7 @@ bazel_dep(name = "rules_cc", version = "0.2.12")  # first with the Bazel-9 cc_co
 # dependency). Per-platform release tarballs are selected by the worker's platform, so the same
 # build is reproducible locally and on a (possibly different-arch) RBE worker.
 lean = use_extension("//lean:extensions.bzl", "lean")
-lean.toolchain(version = "4.30.0")  # pin matches //:lean-toolchain
+lean.toolchain(version = "4.31.0")  # pin matches //:lean-toolchain
 use_repo(lean, "lean_toolchains")
 
 register_toolchains("@lean_toolchains//:all")
@@ -40,26 +40,26 @@ lake = use_extension("//lean:deps.bzl", "lake", dev_dependency = True)
 lake.from_manifest(
     manifest = "//tests/dep:lake-manifest.json",
     sha256 = {
-        "importGraph": "13f4ac429fb98c16d509ad13215a26ea82df17b626b45ac0ef3da315b92bddfe",
-        "Cli": "3870c43085c497cd1bb5fe89be52ff97c04f6a8fe7bb9722fead17b935fc18a9",
+        "importGraph": "2633566bb34e3196cf42a578a54443e2fc4a27fcc099eaf459dba8e76cb42bd1",
+        "Cli": "700467bc86372d7cf4ce3d6c3193ed2f80743c1960391d425e1ebee408440e57",
     },
 )
 
-# A second manifest (//tests/lake_toml) loads Leancremental v0.4.1 through the same lakefile.toml
+# A second manifest (//tests/lake_toml) loads Leancremental v0.4.2 through the same lakefile.toml
 # path — a single package whose library name (Leancremental) differs from its package name.
 lake.from_manifest(
     manifest = "//tests/lake_toml:lake-manifest.json",
-    sha256 = {"leancremental": "be28551e0f35f05098df432692b318fe217ce65c614c2b988bd8cf2153ad6b76"},
+    sha256 = {"leancremental": "b4691936720ee78a8d0f679de159fcdb85731a5b95193511d6def555b9dfac8b"},
 )
 use_repo(lake, "lean_pkg_Cli", "lean_pkg_importGraph", "lean_pkg_leancremental")
 
 # Add a Lean library straight from a git tag (used by //tests/git_dep). The fetch is delegated to
-# Bazel's new_git_repository; we build it from source with no lakefile parsing, so it works even
-# though Leancremental ships a programmatic lakefile.lean.
+# Bazel's new_git_repository; we build it from source with no lakefile parsing (you declare the
+# module roots), so it works for any package regardless of its lakefile format.
 lean_git = use_extension("//lean:deps.bzl", "lean_git", dev_dependency = True)
 lean_git.repository(
     name = "leancremental",
     remote = "https://github.com/chitoge/Leancremental",
-    tag = "v0.3.0",
+    tag = "v0.4.2",
 )
 use_repo(lean_git, "leancremental")

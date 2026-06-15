@@ -221,21 +221,21 @@
     "//lean:deps.bzl%lake": {
       "general": {
         "bzlTransitiveDigest": "MZdUNHWSP/2Ycz9xT0dO2znAQaAtmxI4GD3ap+7u64s=",
-        "usagesDigest": "qoL9qGjot7M6bK8/WjDKiUyor7OeV1vQ3I/LMZAWWxo=",
+        "usagesDigest": "/HdcptGS+KszQAz7zyCmkiadReqsB2lDakRUT/lVviY=",
         "recordedInputs": [
           "REPO_MAPPING:,bazel_tools bazel_tools",
-          "FILE:@@//tests/dep/lake-manifest.json d811d00c89095466d8307051fc7a3f34e8d3750775e0c8f3820a5125041fb1b6",
-          "FILE:@@//tests/lake_toml/lake-manifest.json 90cc3b8d07dc52a444c5b28b0af0e9b70ed96f4c7dd0ed258ad8d2d7e45b99de"
+          "FILE:@@//tests/dep/lake-manifest.json 2bbd240df382cbc2c26f27bfa3d89abfeaee1a55b82c0150d1ddeedbd9a84160",
+          "FILE:@@//tests/lake_toml/lake-manifest.json 1cf10178e48f49fd890464d3c1947b69efcccecd3e73ad5b3b85249b00f10bac"
         ],
         "generatedRepoSpecs": {
           "lean_pkg_importGraph": {
             "repoRuleId": "@@//lean:deps.bzl%lean_lake_package",
             "attributes": {
               "urls": [
-                "https://github.com/leanprover-community/import-graph/archive/515cf9d0c00ece5e661f6de4326a53dedc1e8ea1.tar.gz"
+                "https://github.com/leanprover-community/import-graph/archive/6db47de43aa7f516708053ae2fdadd29dd9baaaa.tar.gz"
               ],
-              "sha256": "13f4ac429fb98c16d509ad13215a26ea82df17b626b45ac0ef3da315b92bddfe",
-              "strip_prefix": "import-graph-515cf9d0c00ece5e661f6de4326a53dedc1e8ea1",
+              "sha256": "2633566bb34e3196cf42a578a54443e2fc4a27fcc099eaf459dba8e76cb42bd1",
+              "strip_prefix": "import-graph-6db47de43aa7f516708053ae2fdadd29dd9baaaa",
               "sub_dir": ""
             }
           },
@@ -243,10 +243,10 @@
             "repoRuleId": "@@//lean:deps.bzl%lean_lake_package",
             "attributes": {
               "urls": [
-                "https://github.com/leanprover/lean4-cli/archive/6b907cf12b2e445ccb7c24bc208ef04a1f39e84c.tar.gz"
+                "https://github.com/leanprover/lean4-cli/archive/92564e5770e4d09f2d86dfbf8ada1e9c715b384c.tar.gz"
               ],
-              "sha256": "3870c43085c497cd1bb5fe89be52ff97c04f6a8fe7bb9722fead17b935fc18a9",
-              "strip_prefix": "lean4-cli-6b907cf12b2e445ccb7c24bc208ef04a1f39e84c",
+              "sha256": "700467bc86372d7cf4ce3d6c3193ed2f80743c1960391d425e1ebee408440e57",
+              "strip_prefix": "lean4-cli-92564e5770e4d09f2d86dfbf8ada1e9c715b384c",
               "sub_dir": ""
             }
           },
@@ -254,10 +254,10 @@
             "repoRuleId": "@@//lean:deps.bzl%lean_lake_package",
             "attributes": {
               "urls": [
-                "https://github.com/chitoge/Leancremental/archive/b42cd936e975c6fc51734ace8300a50f68b16c20.tar.gz"
+                "https://github.com/chitoge/Leancremental/archive/92196e8ac8bccecb591f57a04a0af74c57c2c47a.tar.gz"
               ],
-              "sha256": "be28551e0f35f05098df432692b318fe217ce65c614c2b988bd8cf2153ad6b76",
-              "strip_prefix": "Leancremental-b42cd936e975c6fc51734ace8300a50f68b16c20",
+              "sha256": "b4691936720ee78a8d0f679de159fcdb85731a5b95193511d6def555b9dfac8b",
+              "strip_prefix": "Leancremental-92196e8ac8bccecb591f57a04a0af74c57c2c47a",
               "sub_dir": ""
             }
           }
@@ -267,7 +267,7 @@
     "//lean:deps.bzl%lean_git": {
       "general": {
         "bzlTransitiveDigest": "MZdUNHWSP/2Ycz9xT0dO2znAQaAtmxI4GD3ap+7u64s=",
-        "usagesDigest": "w27rYZ9m6Bx67j/MxElSlOTgxjup8AQtr7lKzvWdcLA=",
+        "usagesDigest": "YQ5Q+wMKpzB36zNvhhyU7BvqHcwlhqFHVd8VxLQYDVQ=",
         "recordedInputs": [
           "REPO_MAPPING:,bazel_tools bazel_tools"
         ],
@@ -277,7 +277,7 @@
             "attributes": {
               "remote": "https://github.com/chitoge/Leancremental",
               "build_file_content": "load(\"@rules_lean4//lean:defs.bzl\", \"lean_library\")\npackage(default_visibility = [\"//visibility:public\"])\n\nlean_library(\n    name = \"Leancremental\",\n    srcs = glob([\"Leancremental.lean\", \"Leancremental/**/*.lean\"], allow_empty = True),\n)\n",
-              "tag": "v0.3.0"
+              "tag": "v0.4.2"
             }
           }
         }
@@ -285,58 +285,58 @@
     },
     "//lean:extensions.bzl%lean": {
       "general": {
-        "bzlTransitiveDigest": "jGyJrEwhKJ2/H26l+6bDnidYUsEayOb5Zb8dMWc5P20=",
-        "usagesDigest": "SAwWVz7ONZVVcEAHJLrp56rf/fFhNW9Evjzdp5i6M/w=",
+        "bzlTransitiveDigest": "g5GYGZq4O5Vg3+O9su9qC7pYtu1APYeHuUkHuoA3+8M=",
+        "usagesDigest": "6LJHrxOl0Hx6b33UbuhBXI0Quetk94tbQuOLSpcjb1M=",
         "recordedInputs": [],
         "generatedRepoSpecs": {
-          "lean_4_30_0_linux_x86_64": {
+          "lean_4_31_0_linux_x86_64": {
             "repoRuleId": "@@//lean:repositories.bzl%lean_download_toolchain_repository",
             "attributes": {
               "urls": [
-                "https://github.com/leanprover/lean4/releases/download/v4.30.0/lean-4.30.0-linux.tar.zst"
+                "https://github.com/leanprover/lean4/releases/download/v4.31.0/lean-4.31.0-linux.tar.zst"
               ],
-              "sha256": "4dad74141c2c119ca1aa626656be83b8e14238afba97271fd7bf1eb3f081b319",
-              "strip_prefix": "lean-4.30.0-linux"
+              "sha256": "07a633cc8d9151cbc08825ea4cdda50d4b02a2c9cb852c0131b13046f49cad7f",
+              "strip_prefix": "lean-4.31.0-linux"
             }
           },
-          "lean_4_30_0_linux_aarch64": {
+          "lean_4_31_0_linux_aarch64": {
             "repoRuleId": "@@//lean:repositories.bzl%lean_download_toolchain_repository",
             "attributes": {
               "urls": [
-                "https://github.com/leanprover/lean4/releases/download/v4.30.0/lean-4.30.0-linux_aarch64.tar.zst"
+                "https://github.com/leanprover/lean4/releases/download/v4.31.0/lean-4.31.0-linux_aarch64.tar.zst"
               ],
-              "sha256": "c99c6f0edd446956d4758c59d4383e8e6411ff6cc71a01f9caabe5eba454121d",
-              "strip_prefix": "lean-4.30.0-linux_aarch64"
+              "sha256": "b1bf1d3c586b76cf4a86212a595d8b9edd99f438a41cce85d5780fa9347c811b",
+              "strip_prefix": "lean-4.31.0-linux_aarch64"
             }
           },
-          "lean_4_30_0_darwin_x86_64": {
+          "lean_4_31_0_darwin_x86_64": {
             "repoRuleId": "@@//lean:repositories.bzl%lean_download_toolchain_repository",
             "attributes": {
               "urls": [
-                "https://github.com/leanprover/lean4/releases/download/v4.30.0/lean-4.30.0-darwin.tar.zst"
+                "https://github.com/leanprover/lean4/releases/download/v4.31.0/lean-4.31.0-darwin.tar.zst"
               ],
-              "sha256": "b38dd8a25b5b5096c6c9019e7ffaddbd91a23fcb5382753225e3314515768ca2",
-              "strip_prefix": "lean-4.30.0-darwin"
+              "sha256": "6dac7a8f9d6d0bc339b4ea9376c06a88f3fd1a7f462beb3c7ded9fbc934f3fb5",
+              "strip_prefix": "lean-4.31.0-darwin"
             }
           },
-          "lean_4_30_0_darwin_aarch64": {
+          "lean_4_31_0_darwin_aarch64": {
             "repoRuleId": "@@//lean:repositories.bzl%lean_download_toolchain_repository",
             "attributes": {
               "urls": [
-                "https://github.com/leanprover/lean4/releases/download/v4.30.0/lean-4.30.0-darwin_aarch64.tar.zst"
+                "https://github.com/leanprover/lean4/releases/download/v4.31.0/lean-4.31.0-darwin_aarch64.tar.zst"
               ],
-              "sha256": "072dca4a38fbc0d3cedb96fea886cc243b424f2bd16247596200b9a9ab93f0f5",
-              "strip_prefix": "lean-4.30.0-darwin_aarch64"
+              "sha256": "264105500c8abdf37b68ffe03390a783ed259807807222698da8dd92d6ce0a27",
+              "strip_prefix": "lean-4.31.0-darwin_aarch64"
             }
           },
           "lean_toolchains": {
             "repoRuleId": "@@//lean:extensions.bzl%_lean_toolchains_hub",
             "attributes": {
               "platform_repos": {
-                "linux-x86_64": "lean_4_30_0_linux_x86_64",
-                "linux-aarch64": "lean_4_30_0_linux_aarch64",
-                "darwin-x86_64": "lean_4_30_0_darwin_x86_64",
-                "darwin-aarch64": "lean_4_30_0_darwin_aarch64"
+                "linux-x86_64": "lean_4_31_0_linux_x86_64",
+                "linux-aarch64": "lean_4_31_0_linux_aarch64",
+                "darwin-x86_64": "lean_4_31_0_darwin_x86_64",
+                "darwin-aarch64": "lean_4_31_0_darwin_aarch64"
               }
             }
           }

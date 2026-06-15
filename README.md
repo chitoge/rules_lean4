@@ -17,7 +17,7 @@ out of Bazel's globals in 9.x) and a `WORKSPACE`-less, bzlmod-only project.
 bazel_dep(name = "rules_lean4", version = "0.1.0")
 
 lean = use_extension("@rules_lean4//lean:extensions.bzl", "lean")
-lean.toolchain(version = "4.30.0")   # match your //:lean-toolchain
+lean.toolchain(version = "4.31.0")   # match your //:lean-toolchain
 use_repo(lean, "lean_toolchains")
 register_toolchains("@lean_toolchains//:all")
 ```
@@ -112,7 +112,7 @@ lean_git = use_extension("@rules_lean4//lean:deps.bzl", "lean_git")
 lean_git.repository(
     name = "leancremental",
     remote = "https://github.com/chitoge/Leancremental",
-    tag = "v0.3.0",
+    tag = "v0.4.2",
     # roots = ["Leancremental"],  # defaults to [lib_name]; lib_name defaults to the repo name
 )
 use_repo(lean_git, "leancremental")
@@ -123,7 +123,7 @@ lean_binary(name = "app", srcs = ["Main.lean"], deps = ["@leancremental//:Leancr
 ```
 
 This is exercised end-to-end by [`tests/git_dep`](tests/git_dep), which fetches
-[Leancremental](https://github.com/chitoge/Leancremental) at `v0.3.0` and runs that library's README
+[Leancremental](https://github.com/chitoge/Leancremental) at `v0.4.2` and runs that library's README
 quick example.
 
 ### Large libraries (mathlib): prebuilt oleans
