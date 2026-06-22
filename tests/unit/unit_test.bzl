@@ -99,10 +99,16 @@ def _distribution_cases(ctx):
     asserts.true(env, urls2[0].endswith("lean-4.30.0-darwin_aarch64.tar.zst"), "darwin arm url")
     asserts.equals(env, "lean-4.30.0-darwin_aarch64", strip2)
 
-    # 4.31.0 is a supported, checksum-pinned version on every platform.
-    for plat in ["linux-x86_64", "linux-aarch64", "darwin-x86_64", "darwin-aarch64"]:
-        _urls, sha431, _strip = distribution("4.31.0", plat)
-        asserts.equals(env, 64, len(sha431), "4.31.0 %s has a pinned sha256" % plat)
+    # 4.31.0 (default) and 4.30.0-rc2 (Aeneas) are checksum-pinned on every platform.
+    for version in ["4.31.0", "4.30.0-rc2"]:
+        for plat in ["linux-x86_64", "linux-aarch64", "darwin-x86_64", "darwin-aarch64"]:
+            _urls, shav, _strip = distribution(version, plat)
+            asserts.equals(env, 64, len(shav), "%s %s has a pinned sha256" % (version, plat))
+
+    # A prerelease version flows through the URL/strip_prefix scheme unchanged.
+    urls_rc, _, strip_rc = distribution("4.30.0-rc2", "linux-aarch64")
+    asserts.true(env, urls_rc[0].endswith("v4.30.0-rc2/lean-4.30.0-rc2-linux_aarch64.tar.zst"), "rc url")
+    asserts.equals(env, "lean-4.30.0-rc2-linux_aarch64", strip_rc)
     return unittest.end(env)
 
 _parse_basic_test = unittest.make(_parse_basic)

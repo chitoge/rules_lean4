@@ -4,15 +4,20 @@ python / cc toolchain — it runs under the Lean toolchain's own `lean --run`.
 
 Reading .lean source contents is only possible at exec time (Starlark can't at analysis time), so
 the per-set dependency ordering lives here:
+  0. merge every dependency olean tree (`--dep-root`) into one scratch search root,
   1. parse `import <Mod>` lines to build the intra-set DAG,
   2. topologically sort the modules,
   3. for each module in order:
        lean  <src> -o <olean-dir>/<Mod/Path>.olean -i ...ilean -c <scratch>/<Mod>.c
        leanc -c -o <obj-dir>/<Mod/Path>.o  <scratch>/<Mod>.c
-     with this olean-dir prepended to LEAN_PATH so later modules import earlier ones.
+     copying each fresh olean into the merged root so later modules import earlier ones.
+
+The merged root (not the individual dep roots) is the LEAN_PATH search root because Lean binds a
+top-level module namespace to a single root: a dependency and this set could otherwise not share a
+top-level namespace across separate roots.
 
 Usage: lean --run elaborate.lean -- --lean L --leanc C --src-root R --olean-dir O --obj-dir B \
-                                     --srcs a.lean b.lean ...
+                                     [--dep-root D ...] --srcs a.lean b.lean ...
 The generated .c goes to a scratch dir (not obj-dir) so the objects tree holds only `.o`.
 -/
 
@@ -23,6 +28,7 @@ structure Opts where
   oleanDir : String := ""
   objDir : String := ""
   opts : Array String := #[]  -- lean options "key=value", passed as -Dkey=value
+  depRoots : Array String := #[]  -- olean roots of dependencies, merged into one search root
   srcs : Array String := #[]
 
 partial def parseArgs (as : List String) (o : Opts) : Opts :=
@@ -34,6 +40,7 @@ partial def parseArgs (as : List String) (o : Opts) : Opts :=
   | "--olean-dir" :: v :: rest => parseArgs rest { o with oleanDir := v }
   | "--obj-dir" :: v :: rest => parseArgs rest { o with objDir := v }
   | "--opt" :: v :: rest => parseArgs rest { o with opts := o.opts.push v }
+  | "--dep-root" :: v :: rest => parseArgs rest { o with depRoots := o.depRoots.push v }
   | "--srcs" :: rest => { o with srcs := rest.toArray }  -- consumes the remainder
   | _ :: rest => parseArgs rest o
 
@@ -89,6 +96,30 @@ def run (cmd : String) (args : Array String) (env : Array (String × Option Stri
     unless out.stderr.isEmpty do IO.eprintln out.stderr
     IO.Process.exit out.exitCode.toUInt8
 
+/-- Copy `src` to `dst`, creating parent directories. Lean ships no symlink-creation primitive and
+    shelling out to `ln` would break hermeticity, so dependency oleans are copied. -/
+def copyFile (src dst : String) : IO Unit := do
+  if let some parent := (System.FilePath.mk dst).parent then
+    IO.FS.createDirAll parent
+  IO.FS.writeBinFile dst (← IO.FS.readBinFile src)
+
+/-- Copy every regular file under `root` into `merged`, preserving relative paths. -/
+partial def mergeRoot (root merged : String) : IO Unit := do
+  for p in (← (System.FilePath.mk root).walkDir) do
+    if (← p.metadata).type == .file then
+      let ps := p.toString
+      let rel := if ps.startsWith (root ++ "/") then (ps.drop (root.length + 1)).toString else ps
+      copyFile ps s!"{merged}/{rel}"
+
+/-- Top-level module-namespace component of a module name (`Foo.Bar` => `Foo`). -/
+def firstComp (m : String) : String := (m.takeWhile (· != '.')).toString
+
+/-- Top-level namespaces an olean root provides, from its first-level entries (`Mathlib/`, a loose
+    `Foo.olean`, ...). A single import root can provide many (mathlib's holds Mathlib, Batteries, …). -/
+def topNamespaces (root : String) : IO (List String) := do
+  let entries ← (System.FilePath.mk root).readDir
+  return entries.toList.map (fun e => firstComp e.fileName)
+
 def main (argv : List String) : IO Unit := do
   let o := parseArgs argv {}
   let pairs := o.srcs.toList.map (fun s => (moduleName s o.srcRoot, s))
@@ -104,9 +135,36 @@ def main (argv : List String) : IO Unit := do
   let depsOf := fun (m : String) => ((depMap.find? (·.1 == m)).map (·.2)).getD []
 
   let scratch ← IO.FS.createTempDir
-  -- prepend our olean-dir to LEAN_PATH so later modules import earlier ones in this set.
-  let basePath := (← IO.getEnv "LEAN_PATH").getD ""
-  let leanPath := o.oleanDir ++ (if basePath.isEmpty then "" else ":" ++ basePath)
+  -- Lean binds a top-level module namespace to a SINGLE LEAN_PATH root and does not fall through to
+  -- later roots. So every namespace must live in exactly one root. A namespace provided by more than
+  -- one root — this set's own oleans (`o.oleanDir`) counts as a root — is "contested": those roots
+  -- are copied into one `merged` root. Roots whose namespaces are all unique (e.g. a mathlib import,
+  -- disjoint from this set's code) stay on LEAN_PATH untouched — no multi-GB copy. This both fixes
+  -- same-namespace splits (dep `Foo.Core` + own `Foo.App`) and keeps large foreign-namespace
+  -- dependencies cheap.
+  let ownTopNs := mods.map firstComp
+  let mut depNs : List (String × List String) := []
+  for dr in o.depRoots do
+    depNs := depNs ++ [(dr, ← topNamespaces dr)]
+  let contested := fun (n : String) =>
+    let ownCount := if ownTopNs.contains n then 1 else 0
+    ownCount + (depNs.filter (fun (_, ns) => ns.contains n)).length ≥ 2
+  let ownMerged := ownTopNs.any contested
+
+  let merged := s!"{scratch}/merged"
+  IO.FS.createDirAll merged
+  let mut pathRoots : List String := []  -- uncontested dep roots, used directly on LEAN_PATH
+  for (dr, ns) in depNs do
+    if ns.any contested then
+      mergeRoot dr merged
+    else
+      pathRoots := pathRoots ++ [dr]
+  let stdPath := (← IO.getEnv "LEAN_PATH").getD ""
+  -- merged first; own oleanDir only if its namespaces are uncontested (else its modules are in
+  -- merged and oleanDir on the path would re-shadow them).
+  let roots := [merged] ++ pathRoots ++ (if ownMerged then [] else [o.oleanDir])
+    ++ (if stdPath.isEmpty then [] else [stdPath])
+  let leanPath := ":".intercalate roots
   let envOverride : Array (String × Option String) := #[("LEAN_PATH", some leanPath)]
 
   for m in topoSort mods depsOf do
@@ -130,4 +188,18 @@ def main (argv : List String) : IO Unit := do
     IO.FS.writeFile setupPath setup
     let optArgs := o.opts.map (fun kv => "-D" ++ kv)
     run o.lean (#[src, "--setup", setupPath] ++ optArgs ++ #["-o", olean, "-i", ilean, "-c", cfile]) envOverride
+    -- When this set's own oleans are merged (a contested namespace), copy each module's *whole*
+    -- artifact set into `merged` so later modules can import it. Not just the .olean: module-system
+    -- modules also emit data files (.olean.private / .olean.server / .ir) imports need ("missing
+    -- data file" otherwise). When uncontested, o.oleanDir is on LEAN_PATH and no copy is needed.
+    if ownMerged then
+      let relPath := System.FilePath.mk rel
+      let base := relPath.fileName.getD rel
+      let srcDir := (System.FilePath.mk olean).parent.getD (System.FilePath.mk ".")
+      let dstDir := match relPath.parent with
+        | some p => s!"{merged}/{p}"
+        | none => merged
+      for ent in (← srcDir.readDir) do
+        if ent.fileName.startsWith (base ++ ".") then
+          copyFile ent.path.toString s!"{dstDir}/{ent.fileName}"
     run o.leanc #["-c", "-o", obj, cfile] envOverride

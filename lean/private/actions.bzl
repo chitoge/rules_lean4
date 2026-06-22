@@ -8,15 +8,19 @@ cc_library); no Lean rule depends on a C++ toolchain.
 
 load("@rules_cc//cc/common:cc_info.bzl", "CcInfo")
 
-def lean_env(tc, dep_roots = []):
-    """Hermetic env for a lean/leanc action; paths come from staged File paths."""
+def lean_env(tc):
+    """Hermetic env for a lean/leanc action; paths come from staged File paths.
+
+    LEAN_PATH carries only the toolchain's std oleans. Dependency oleans are not on LEAN_PATH: the
+    elaborate orchestrator merges them into a single search root (see elaborate.lean).
+    """
     return {
-        "LEAN_PATH": ":".join([tc.std_olean_root] + dep_roots),
+        "LEAN_PATH": tc.std_olean_root,
         "LEAN_SYSROOT": tc.sysroot,
         "LD_LIBRARY_PATH": ":".join(tc.lib_dirs.to_list()),
     }
 
-def _run_lean_script(ctx, script, tc, dep_roots, tool_args, inputs, outputs, mnemonic, msg):
+def _run_lean_script(ctx, script, tc, tool_args, inputs, outputs, mnemonic, msg):
     # `lean --run <script> -- <tool flags>`. Pass the preamble and the tool-arg Args as separate
     # entries in `arguments` (Bazel concatenates them); never nest one Args inside another.
     preamble = ctx.actions.args()
@@ -28,7 +32,7 @@ def _run_lean_script(ctx, script, tc, dep_roots, tool_args, inputs, outputs, mne
         arguments = [preamble, tool_args],
         inputs = depset([script], transitive = inputs + [tc.all_files]),
         outputs = outputs,
-        env = lean_env(tc, dep_roots),
+        env = lean_env(tc),
         mnemonic = mnemonic,
         progress_message = msg,
     )
@@ -51,13 +55,17 @@ def elaborate(ctx, name, srcs, src_root, dep, tc, opts = {}):
     tool_args.add("--obj-dir", objects.path)
     for k, v in opts.items():
         tool_args.add("--opt", "%s=%s" % (k, v))
+
+    # The orchestrator merges the dep olean trees into one search root (see elaborate.lean), so they
+    # are passed as data, not via LEAN_PATH; LEAN_PATH then carries only the toolchain std root.
+    # `before_each` repeats the flag per root (`--dep-root a --dep-root b`), which the parser needs.
+    tool_args.add_all(dep.transitive_olean_roots, before_each = "--dep-root")
     tool_args.add_all("--srcs", srcs)
 
     _run_lean_script(
         ctx,
         script = ctx.file._builder,
         tc = tc,
-        dep_roots = dep.transitive_olean_roots.to_list(),
         tool_args = tool_args,
         inputs = [depset(srcs), dep.transitive_oleans],
         outputs = [oleans, objects],
@@ -121,7 +129,6 @@ def link(ctx, out, objects, tc):
         ctx,
         script = ctx.file._linker,
         tc = tc,
-        dep_roots = [],
         tool_args = tool_args,
         inputs = [depset(objects)],
         outputs = [out],

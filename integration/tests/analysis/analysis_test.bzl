@@ -1,7 +1,7 @@
 """Analysis-phase tests: LeanInfo propagation/dedup, action mnemonics, and an expected failure."""
 
 load("@bazel_skylib//lib:unittest.bzl", "analysistest", "asserts")
-load("//lean:defs.bzl", "LeanInfo")
+load("@rules_lean4//lean:defs.bzl", "LeanInfo")
 
 def _propagation(ctx):
     # libTop -> {libLeft, libRight} -> libBase. transitive_oleans should accumulate all four, with

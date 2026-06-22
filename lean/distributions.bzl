@@ -24,6 +24,13 @@ _BASE = "https://github.com/leanprover/lean4/releases/download"
 
 # version -> platform -> sha256 ("" = unverified; recorded into MODULE.bazel.lock on first fetch).
 _SHA256 = {
+    # A release candidate, pinned for the Aeneas example (aeneas tracks leanprover/lean4:v4.30.0-rc2).
+    "4.30.0-rc2": {
+        "linux-x86_64": "5b51625f154f0a13b37bd892f1d95f79e9fd5b9f0d095b4126215ee2bc8dbe86",
+        "linux-aarch64": "b196f41da23960e842fc0fc04749d1639d44839feafc0414e53cb2db6b16790f",
+        "darwin-x86_64": "92a8fd819d34d920ee592f00cb8e3d7449682c4b2e43a0760c2921a6e0e7f370",
+        "darwin-aarch64": "6a23d26241fd78bcc3d1c24be97341bfe3f4635f2e6feabcbb5863035290ab1b",
+    },
     "4.30.0": {
         "linux-x86_64": "4dad74141c2c119ca1aa626656be83b8e14238afba97271fd7bf1eb3f081b319",
         "linux-aarch64": "c99c6f0edd446956d4758c59d4383e8e6411ff6cc71a01f9caabe5eba454121d",

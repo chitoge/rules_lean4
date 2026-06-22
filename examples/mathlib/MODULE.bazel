@@ -1,0 +1,39 @@
+"""Example: depend on mathlib (ingested as a prebuilt olean cache) and machine-check a proof.
+
+A separate Bazel module — like `e2e/` — that consumes rules_lean4 the way a downstream project does.
+mathlib is fetched via `lean_lake_cache`, which clones mathlib4 at a tag, downloads the matching Lean
+release, runs `lake exe cache get` to pull the prebuilt oleans (mathlib + its transitive deps), and
+exposes them as `@mathlib//:Mathlib`. Building the proof library elaborates (and thus checks) it.
+
+Heavy and network-bound (the mathlib cache is several GB), so it lives outside the root module's
+suite. Run from this directory: `bazel test //...`.
+"""
+
+module(
+    name = "lean_mathlib_example",
+    version = "0.0.0",
+)
+
+bazel_dep(name = "rules_lean4", version = "0.1.0")
+local_path_override(
+    module_name = "rules_lean4",
+    path = "../..",
+)
+
+bazel_dep(name = "bazel_skylib", version = "1.7.1")  # build_test
+
+lean = use_extension("@rules_lean4//lean:extensions.bzl", "lean")
+lean.toolchain(version = "4.31.0")  # mathlib v4.31.0 pins leanprover/lean4:v4.31.0
+use_repo(lean, "lean_toolchains")
+
+register_toolchains("@lean_toolchains//:all")
+
+# mathlib's prebuilt olean cache, via `lake exe cache get` (see lean_lake_cache in lean/deps.bzl).
+mathlib = use_repo_rule("@rules_lean4//lean:deps.bzl", "lean_lake_cache")
+
+mathlib(
+    name = "mathlib",
+    lib_name = "Mathlib",
+    remote = "https://github.com/leanprover-community/mathlib4",
+    tag = "v4.31.0",
+)

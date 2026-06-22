@@ -1,0 +1,68 @@
+"""Integration test workspace: exercises rules_lean4's Lean toolchain end to end.
+
+A separate Bazel module that consumes rules_lean4 the way a downstream project does — it selects the
+Lean version in its own (root) MODULE.bazel, which is the single source of truth. The toolchain-using
+tests live here (the root rules_lean4 module registers no toolchain at all). The root drives this via
+the `//:integration_test` `bazel_integration_test` target; you can also run it directly:
+
+    cd integration && bazel test //...
+
+Needs network: the Lean 4.31.0 release (~500MB), an LLVM toolchain, and the lake/lean_git external
+Lean packages used by tests/dep, tests/lake_toml, and tests/git_dep.
+"""
+
+module(
+    name = "rules_lean4_integration",
+    version = "0.0.0",
+)
+
+bazel_dep(name = "rules_lean4", version = "0.1.0")
+local_path_override(
+    module_name = "rules_lean4",
+    path = "..",
+)
+
+bazel_dep(name = "platforms", version = "0.0.10")
+bazel_dep(name = "bazel_skylib", version = "1.7.1")  # build_test, analysistest
+bazel_dep(name = "rules_cc", version = "0.2.12")  # cc_library in ffi / reverse_ffi
+bazel_dep(name = "rules_shell", version = "0.5.0")  # sh_test golden-output tests
+bazel_dep(name = "toolchains_llvm", version = "1.8.0")  # hermetic clang/clang++ for FFI
+
+# Hermetic, checksum-pinned Lean toolchain. The consumer is the single source of truth for the
+# version (it must match //:lean-toolchain).
+lean = use_extension("@rules_lean4//lean:extensions.bzl", "lean")
+lean.toolchain(version = "4.31.0")
+use_repo(lean, "lean_toolchains")
+
+register_toolchains("@lean_toolchains//:all")
+
+# Hermetic LLVM for the FFI paths that use a cc toolchain (cc_deps / reverse FFI).
+llvm = use_extension("@toolchains_llvm//toolchain/extensions:llvm.bzl", "llvm")
+llvm.toolchain(llvm_version = "19.1.0")
+use_repo(llvm, "llvm_toolchain")
+
+register_toolchains("@llvm_toolchain//:all")
+
+# External Lake dependencies loaded from manifests (used by tests/dep and tests/lake_toml).
+lake = use_extension("@rules_lean4//lean:deps.bzl", "lake")
+lake.from_manifest(
+    manifest = "//tests/dep:lake-manifest.json",
+    sha256 = {
+        "importGraph": "2633566bb34e3196cf42a578a54443e2fc4a27fcc099eaf459dba8e76cb42bd1",
+        "Cli": "700467bc86372d7cf4ce3d6c3193ed2f80743c1960391d425e1ebee408440e57",
+    },
+)
+lake.from_manifest(
+    manifest = "//tests/lake_toml:lake-manifest.json",
+    sha256 = {"leancremental": "b4691936720ee78a8d0f679de159fcdb85731a5b95193511d6def555b9dfac8b"},
+)
+use_repo(lake, "lean_pkg_Cli", "lean_pkg_importGraph", "lean_pkg_leancremental")
+
+# A Lean library straight from a git tag (used by tests/git_dep).
+lean_git = use_extension("@rules_lean4//lean:deps.bzl", "lean_git")
+lean_git.repository(
+    name = "leancremental",
+    remote = "https://github.com/chitoge/Leancremental",
+    tag = "v0.4.2",
+)
+use_repo(lean_git, "leancremental")

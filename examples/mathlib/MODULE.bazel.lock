@@ -246,29 +246,10 @@
         }
       }
     },
-    "@@rules_lean4+//lean:deps.bzl%lean_git": {
-      "general": {
-        "bzlTransitiveDigest": "1sN1WzM8KNL6zF5rHd7o2KNqWJYEqL9KI+S+Q7iGvjE=",
-        "usagesDigest": "sn6H+yCXTdKlhB7X4r3vBis1nZlG34lx8Fw+jt6/vh0=",
-        "recordedInputs": [
-          "REPO_MAPPING:rules_lean4+,bazel_tools bazel_tools"
-        ],
-        "generatedRepoSpecs": {
-          "leancremental": {
-            "repoRuleId": "@@bazel_tools//tools/build_defs/repo:git.bzl%git_repository",
-            "attributes": {
-              "remote": "https://github.com/chitoge/Leancremental",
-              "build_file_content": "load(\"@rules_lean4//lean:defs.bzl\", \"lean_library\")\npackage(default_visibility = [\"//visibility:public\"])\n\nlean_library(\n    name = \"Leancremental\",\n    srcs = glob([\"Leancremental.lean\", \"Leancremental/**/*.lean\"], allow_empty = True),\n)\n",
-              "tag": "v0.4.2"
-            }
-          }
-        }
-      }
-    },
     "@@rules_lean4+//lean:extensions.bzl%lean": {
       "general": {
-        "bzlTransitiveDigest": "FgARhVzCWQGUs2Wnh3MkmPLiua3S2Lq2m01hEqSRJH4=",
-        "usagesDigest": "qp0sW5wzOp4I/f/+2K/PPOVCHRog9HzuQHKRv9BPW78=",
+        "bzlTransitiveDigest": "g5GYGZq4O5Vg3+O9su9qC7pYtu1APYeHuUkHuoA3+8M=",
+        "usagesDigest": "wd1DfFlOL02GvglchOsv55Wg5dG87eKufzMi7V5WZY8=",
         "recordedInputs": [],
         "generatedRepoSpecs": {
           "lean_4_31_0_linux_x86_64": {

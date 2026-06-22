@@ -1,2 +1,10 @@
 e2e
+examples
 .cache
+# integration/ itself is NOT ignored (the bazel_integration_test glob must see its files), but its
+# Bazel convenience symlinks must be, so the root `//...` wildcard does not descend into the nested
+# workspace's output tree.
+integration/bazel-bin
+integration/bazel-integration
+integration/bazel-out
+integration/bazel-testlogs

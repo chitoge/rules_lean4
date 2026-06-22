@@ -1,4 +1,56 @@
-# Root package. Public rules live in //lean.
+# Root package. Public rules live in //lean. The toolchain-using tests run as a nested-Bazel consumer
+# workspace (integration/) via the bazel_integration_test target below.
+load("@bazel_binaries//:defs.bzl", "bazel_binaries")
+load(
+    "@rules_bazel_integration_test//bazel_integration_test:defs.bzl",
+    "bazel_integration_test",
+    "default_test_runner",
+    "integration_test_utils",
+)
+
 package(default_visibility = ["//visibility:public"])
 
-exports_files(["lean-toolchain"])
+exports_files([
+    ".bazelversion",  # bazel_binaries.download(version_file = "//:.bazelversion")
+    "lean-toolchain",
+])
+
+# rules_lean4's own source, staged into the integration test's scratch dir at the repo-root-relative
+# path so integration/MODULE.bazel's `local_path_override(path = "..")` resolves there.
+filegroup(
+    name = "rules_lean4_files",
+    srcs = [
+        ".bazelrc",
+        ".bazelversion",
+        "BUILD.bazel",
+        "MODULE.bazel",
+        "lean-toolchain",
+        "//lean:all_files",  # the rules (//lean + //lean/private), across package boundaries
+    ],
+    visibility = ["//visibility:public"],
+)
+
+default_test_runner(
+    name = "integration_test_runner",
+    bazel_cmds = ["test //... --test_output=errors"],
+)
+
+# Run the toolchain-using suite (integration/) under a nested Bazel that consumes rules_lean4 exactly
+# as a downstream project does. Tagged `manual` + `exclusive` (so plain `//...` skips it — name it
+# explicitly); `no-sandbox` + `requires-network` let the nested Bazel fetch the Lean release and the
+# lake/lean_git external packages, and reach the host repository cache via the inherited HOME.
+bazel_integration_test(
+    name = "integration_test",
+    timeout = "eternal",  # first run downloads the Lean release (~500MB) + builds the whole suite
+    bazel_binaries = bazel_binaries,
+    bazel_version = bazel_binaries.versions.current,
+    tags = integration_test_utils.DEFAULT_INTEGRATION_TEST_TAGS + [
+        "no-sandbox",
+        "requires-network",
+    ],
+    test_runner = ":integration_test_runner",
+    workspace_files = integration_test_utils.glob_workspace_files("integration") + [
+        ":rules_lean4_files",
+    ],
+    workspace_path = "integration",
+)

@@ -21,6 +21,7 @@
 """
 
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "new_git_repository")
+load("//lean:distributions.bzl", "distribution")
 load("//lean/private:lakefile.bzl", "gen_build", "parse_lakefile")
 
 # --- repository rule: fetch a package + generate its BUILD ---
@@ -134,6 +135,121 @@ lean_olean_archive = repository_rule(
         "strip_prefix": attr.string(default = ""),
         "import_dir": attr.string(default = ".", doc = "Dir within the archive that is the LEAN_PATH root."),
         "lib_name": attr.string(default = "oleans"),
+    },
+)
+
+# --- mathlib-scale dep via Lake's own prebuilt-olean cache (`lake exe cache get`) ---
+#
+# Building mathlib from source is impractical, so fetch its prebuilt oleans the way every mathlib
+# user does: clone the project, download the matching Lean release, and run `lake exe cache get`
+# (which pulls oleans for the project AND its transitive deps from the Reservoir/Azure cache). The
+# per-package olean trees (`.lake/build/lib/lean`, `.lake/packages/*/.lake/build/lib/lean`) are
+# consolidated by hardlink into a single LEAN_PATH root and exposed via lean_import. Like the other
+# git-backed paths this hits the network at fetch time (not reproducible); pin a `commit`.
+
+def _host_lean_platform(rctx):
+    name = rctx.os.name.lower()
+    os = "darwin" if ("mac" in name or "osx" in name or "darwin" in name) else "linux"
+    cpu = "aarch64" if rctx.os.arch in ("aarch64", "arm64") else "x86_64"
+    return "%s-%s" % (os, cpu)
+
+# Merge every package's olean root into one `oleans/` root by hardlink (cheap, same filesystem), then
+# drop the source tree + downloaded toolchain so the repo holds only the oleans. GNU coreutils.
+_CACHE_CONSOLIDATE = """\
+set -euo pipefail
+proj="{proj}"
+mkdir -p oleans
+cp -al "$proj/.lake/build/lib/lean/." oleans/
+for p in "$proj"/.lake/packages/*/.lake/build/lib/lean ; do
+  [ -d "$p" ] && cp -al "$p/." oleans/
+done
+rm -rf src toolchain elan_home
+"""
+
+def _lean_lake_cache_impl(rctx):
+    if bool(rctx.attr.tag) == bool(rctx.attr.commit):
+        fail("lean_lake_cache(name = %r): set exactly one of `tag` or `commit`." % rctx.attr.name)
+
+    # 1. Fetch the project source at the requested ref.
+    if rctx.attr.tag:
+        clone = ["git", "clone", "--depth", "1", "--branch", rctx.attr.tag, rctx.attr.remote, "src"]
+    else:
+        clone = ["git", "clone", rctx.attr.remote, "src"]
+    res = rctx.execute(clone, timeout = 1200)
+    if res.return_code != 0:
+        fail("git clone of %s failed:\n%s" % (rctx.attr.remote, res.stderr))
+    if rctx.attr.commit:
+        res = rctx.execute(["git", "-C", "src", "checkout", rctx.attr.commit], timeout = 600)
+        if res.return_code != 0:
+            fail("git checkout %s failed:\n%s" % (rctx.attr.commit, res.stderr))
+
+    # The Lake project may live in a subdirectory of the repo (e.g. aeneas's backends/lean).
+    proj = "src/" + rctx.attr.sub_dir if rctx.attr.sub_dir else "src"
+
+    # 2. Download the Lean release the project pins (for its lake/lean/leantar).
+    toolchain = rctx.read(proj + "/lean-toolchain").strip()
+    version = toolchain.rsplit(":", 1)[-1].strip().lstrip("v")
+    urls, sha, strip = distribution(version, _host_lean_platform(rctx))
+    rctx.download_and_extract(url = urls, sha256 = sha, stripPrefix = strip, output = "toolchain")
+
+    # 3. Populate the olean cache via Lake (resolves deps, builds the cache exe, downloads oleans).
+    env = {
+        "PATH": str(rctx.path("toolchain/bin")) + ":" + (rctx.os.environ.get("PATH") or "/usr/bin:/bin"),
+        "HOME": rctx.os.environ.get("HOME", str(rctx.path("."))),
+        "ELAN_HOME": str(rctx.path("elan_home")),  # Lake writes its cache index here; must be writable
+    }
+    res = rctx.execute(
+        [rctx.path("toolchain/bin/lake"), "exe", "cache", "get"],
+        working_directory = proj,
+        environment = env,
+        timeout = rctx.attr.timeout,
+    )
+    if res.return_code != 0:
+        fail("`lake exe cache get` failed (rc=%d):\n%s\n%s" % (res.return_code, res.stdout, res.stderr))
+
+    # 3b. Optionally build the project's own libraries from source (their deps come prebuilt from the
+    # cache above), so their oleans are included too — e.g. Aeneas on top of a cached mathlib.
+    if rctx.attr.build_targets:
+        res = rctx.execute(
+            [rctx.path("toolchain/bin/lake"), "build"] + rctx.attr.build_targets,
+            working_directory = proj,
+            environment = env,
+            timeout = rctx.attr.timeout,
+        )
+        if res.return_code != 0:
+            fail("`lake build %s` failed (rc=%d):\n%s\n%s" % (
+                " ".join(rctx.attr.build_targets),
+                res.return_code,
+                res.stdout,
+                res.stderr,
+            ))
+
+    # 4. Consolidate the per-package olean roots into one, then expose it via lean_import.
+    res = rctx.execute(["bash", "-c", _CACHE_CONSOLIDATE.format(proj = proj)], timeout = 1200)
+    if res.return_code != 0:
+        fail("consolidating oleans failed:\n%s" % res.stderr)
+    rctx.file("BUILD.bazel", _OLEAN_BUILD.format(
+        defs = _DEFS_BZL,
+        name = rctx.attr.lib_name,
+        root = "oleans/",
+        import_dir = "oleans",
+    ))
+
+lean_lake_cache = repository_rule(
+    implementation = _lean_lake_cache_impl,
+    doc = "Fetch a Lake project and its prebuilt olean cache via `lake exe cache get` (the practical " +
+          "way to depend on mathlib-scale libraries), exposing the consolidated oleans via " +
+          "lean_import. Needs `git` and network at fetch time. Requires GNU coreutils.",
+    attrs = {
+        "remote": attr.string(mandatory = True, doc = "Git URL of the Lake project, e.g. the mathlib4 repo."),
+        "tag": attr.string(doc = "Tag to fetch (e.g. v4.31.0). Set exactly one of `tag` / `commit`."),
+        "commit": attr.string(doc = "Commit to fetch (most reproducible). Set exactly one of `tag` / `commit`."),
+        "sub_dir": attr.string(doc = "Lake project subdirectory within the repo (e.g. `backends/lean`); default repo root."),
+        "build_targets": attr.string_list(doc = "Lake targets to build from source after `cache get` " +
+                                                "(their deps come prebuilt from the cache); their oleans " +
+                                                "are included too, e.g. `[\"Aeneas\", \"AeneasMeta\"]`."),
+        "lib_name": attr.string(default = "oleans", doc = "Generated lean_import target name (`@<name>//:<lib_name>`)."),
+        "timeout": attr.int(default = 1800, doc = "Seconds allowed for `lake exe cache get` (mathlib downloads GBs)."),
     },
 )
 

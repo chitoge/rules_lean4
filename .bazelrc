@@ -2,3 +2,10 @@
 # The dev-only toolchains_llvm resolves them higher in *our* build (consumers don't inherit dev deps),
 # which would otherwise warn — so we disable the direct-dependency version nag.
 common --check_direct_dependencies=off
+
+# integration/ is a nested consumer module (its own MODULE.bazel + BUILD files). The
+# bazel_integration_test `workspace_files` glob must SEE those files to stage them, but the outer
+# Bazel must not treat them as its own packages — so mark them deleted (NOT .bazelignore, which would
+# hide them from the glob). Regenerate with:
+#   bazel run @rules_bazel_integration_test//tools:update_deleted_packages
+common --deleted_packages=integration,integration/tests,integration/tests/analysis,integration/tests/dep,integration/tests/exe,integration/tests/ffi,integration/tests/git_dep,integration/tests/lake_toml,integration/tests/lib_dep,integration/tests/multi,integration/tests/negative,integration/tests/proof,integration/tests/reverse_ffi

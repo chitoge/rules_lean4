@@ -6,8 +6,13 @@ package(default_visibility = ["//visibility:public"])
 # The toolchain type that the Lean rules resolve against.
 toolchain_type(name = "toolchain_type")
 
-# Lean's C headers (lean.h, ...) as a CcInfo — depend a cc_library on this to write FFI.
-lean_cc_headers(name = "headers")
+# Lean's C headers (lean.h, ...) as a CcInfo — depend a cc_library on this to write FFI. Building it
+# needs a registered Lean toolchain, which this (ruleset) module does not have, so it is `manual`:
+# consumers reference it explicitly (`@rules_lean4//lean:headers`); a bare `//...` here skips it.
+lean_cc_headers(
+    name = "headers",
+    tags = ["manual"],
+)
 
 # All Starlark sources, for downstream bzl_library consumers / stardoc.
 bzl_library(
@@ -17,4 +22,12 @@ bzl_library(
         "@rules_cc//cc:find_cc_toolchain_bzl",
         "@rules_cc//cc/common",
     ],
+)
+
+# Every source file of the rules (this package + lean/private), for staging rules_lean4 into the
+# integration test's sandbox so its `local_path_override` resolves (see //:rules_lean4_files).
+filegroup(
+    name = "all_files",
+    srcs = glob(["**"]) + ["//lean/private:all_files"],
+    visibility = ["//visibility:public"],
 )

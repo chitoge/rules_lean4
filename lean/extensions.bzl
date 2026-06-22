@@ -40,7 +40,10 @@ _lean_toolchains_hub = repository_rule(
 )
 
 def _lean_impl(mctx):
-    # Last-write-wins across the dep graph (root module's tags come last → take precedence).
+    # The Lean version is the root module's single choice for the whole project: it sets the toolchain
+    # in its own MODULE.bazel. rules_lean4 registers a toolchain only as a *dev dependency* (for its
+    # own tests), so when it is a dependency its selection is not seen here — only the consumer's is.
+    # `version` defaults to 4.31.0 if the root sets no `lean.toolchain` tag.
     version = "4.31.0"
     urls_override = {}
     sha_override = {}
@@ -61,7 +64,9 @@ def _lean_impl(mctx):
             sha = sha_override[plat]
         if plat in strip_override:
             strip = strip_override[plat]
-        repo = "lean_%s_%s" % (version.replace(".", "_"), plat.replace("-", "_"))
+
+        # Sanitize both `.` and `-` (the latter appears in prereleases like 4.30.0-rc2) to `_`.
+        repo = "lean_%s_%s" % (version.replace(".", "_").replace("-", "_"), plat.replace("-", "_"))
         lean_download_toolchain_repository(
             name = repo,
             urls = urls,

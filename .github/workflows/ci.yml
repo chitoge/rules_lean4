@@ -9,34 +9,61 @@ permissions:
   contents: read
 
 jobs:
+  # Root module: pure-Starlark unit tests + API docs. No Lean toolchain, no network — the root
+  # registers no toolchain (the toolchain-using suite is the `integration` job below).
   test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/bazel
+          key: bazel-root-${{ hashFiles('MODULE.bazel.lock', '.bazelversion') }}
+          restore-keys: bazel-root-
+      # Needed only by //docs:api — stardoc's renderer compiles against host glibc headers via the
+      # dev-only LLVM toolchain. The unit tests are pure Starlark and need nothing.
+      - name: Install build-essential (Linux)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq build-essential libxml2
+      - name: Unit tests
+        run: bazel test //... --build_tests_only --test_output=errors
+      - name: API docs generate
+        run: bazel build //docs:api
+
+  # The toolchain-using suite, run as a nested-Bazel consumer workspace (integration/) via the
+  # //:integration_test bazel_integration_test target. Linux gates; macOS is best-effort (the
+  # cc_deps / reverse_ffi paths depend on toolchains_llvm resolving a clang + SDK on the runner).
+  integration:
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
-    # Linux is the gating platform. macOS runs as a best-effort signal: the cc_deps / reverse_ffi
-    # paths need toolchains_llvm to resolve a clang + macOS SDK on the runner, which isn't verified
-    # here, so a macOS failure doesn't fail the build.
     continue-on-error: ${{ matrix.os == 'macos-latest' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/cache@v4
         with:
           path: ~/.cache/bazel
-          key: bazel-${{ matrix.os }}-${{ hashFiles('MODULE.bazel.lock', '.bazelversion') }}
-          restore-keys: bazel-${{ matrix.os }}-
-      # The Lean and clang toolchains are downloaded + pinned, but on Linux toolchains_llvm compiles
-      # against host glibc headers (build-essential) and its ld.lld/clang link host libs (libxml2).
-      # GitHub runners ship both; install for safety / parity with the bare GitLab CI image.
+          key: bazel-integration-${{ matrix.os }}-${{ hashFiles('integration/MODULE.bazel.lock', '.bazelversion') }}
+          restore-keys: bazel-integration-${{ matrix.os }}-
       - name: Install build-essential (Linux)
         if: runner.os == 'Linux'
         run: sudo apt-get update -qq && sudo apt-get install -y -qq build-essential libxml2
-      - name: Test (examples, unit, analysis, multi, dep)
-        run: bazel test //... --test_output=errors
-      - name: API docs generate
-        run: bazel build //docs:api
+      # The bazel_integration_test runner inherits HOME and honors the home .bazelrc, so the nested
+      # Bazel reuses these caches — the ~500MB Lean release + lake/lean_git deps download once.
+      - name: Shared Bazel caches for the nested build
+        run: |
+          mkdir -p "$HOME/.cache/bazel/repo" "$HOME/.cache/bazel/disk"
+          {
+            echo "common --repository_cache=$HOME/.cache/bazel/repo"
+            echo "common --disk_cache=$HOME/.cache/bazel/disk"
+            echo "common --repo_contents_cache="
+          } > ~/.bazelrc
+      - name: Integration suite (nested Bazel)
+        run: bazel test //:integration_test --test_output=errors
 
+  # Each //tests/negative target must FAIL to build (false proof, missing import, undefined extern).
+  # The framework can't assert a build failure, so this stays a script — run inside integration/.
   negative:
     runs-on: ubuntu-latest
     steps:
@@ -44,14 +71,13 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: ~/.cache/bazel
-          key: bazel-negative-${{ hashFiles('MODULE.bazel.lock', '.bazelversion') }}
+          key: bazel-negative-${{ hashFiles('integration/MODULE.bazel.lock', '.bazelversion') }}
           restore-keys: bazel-negative-
       - name: Install build-essential (Linux)
-        if: runner.os == 'Linux'
         run: sudo apt-get update -qq && sudo apt-get install -y -qq build-essential libxml2
-      # Each //tests/negative target must FAIL to build (false proof, missing import, undefined extern).
       - name: Expect build failures
-        run: tests/negative/expect_failures.sh
+        working-directory: integration
+        run: ./tests/negative/expect_failures.sh
 
   e2e:
     runs-on: ubuntu-latest
@@ -71,6 +97,22 @@ jobs:
         working-directory: e2e
         run: bazel test //... --test_output=errors
 
+  # Heavy + network-bound (downloads mathlib's multi-GB prebuilt olean cache via `lake exe cache
+  # get`), so it is non-gating best-effort signal rather than a required check. No bazel cache: the
+  # fetched cache is several GB and would blow the Actions cache budget.
+  mathlib-example:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build-essential (Linux)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq build-essential libxml2
+      # Ingest mathlib as a prebuilt olean cache (lean_lake_cache) and machine-check a proof against
+      # it — the practical mathlib-scale dependency path.
+      - name: mathlib proof example
+        working-directory: examples/mathlib
+        run: bazel test //... --test_output=errors
+
   hermeticity:
     runs-on: ubuntu-latest
     steps:
@@ -78,16 +120,18 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: ~/.cache/bazel
-          key: bazel-sandbox-${{ hashFiles('MODULE.bazel.lock', '.bazelversion') }}
+          key: bazel-sandbox-${{ hashFiles('integration/MODULE.bazel.lock', '.bazelversion') }}
           restore-keys: bazel-sandbox-
       - name: Install build-essential (Linux)
-        if: runner.os == 'Linux'
         run: sudo apt-get update -qq && sudo apt-get install -y -qq build-essential libxml2
-      # Re-run every action under the sandbox to verify inputs are completely declared.
+      # Re-run every action under the sandbox to verify inputs are completely declared. Run the
+      # nested workspace directly (cheaper than through bazel_integration_test for these checks).
       - name: Sandboxed test
+        working-directory: integration
         run: bazel test //... --spawn_strategy=sandboxed --test_output=errors
       # The same build twice must produce byte-identical outputs.
       - name: Determinism
+        working-directory: integration
         run: |
           bazel build //tests/exe:fib //tests/multi:multi
           h1=$(sha256sum bazel-bin/tests/exe/fib bazel-bin/tests/multi/multi | cut -d' ' -f1)

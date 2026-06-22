@@ -1,0 +1,16 @@
+load("@bazel_skylib//rules:build_test.bzl", "build_test")
+load("@rules_lean4//lean:defs.bzl", "lean_library")
+
+# Proofs checked against mathlib. `@mathlib//:Mathlib` is the prebuilt olean cache; elaborating this
+# library (which imports mathlib) machine-checks every proof in it.
+lean_library(
+    name = "verify",
+    srcs = ["Verify.lean"],
+    deps = ["@mathlib//:Mathlib"],
+)
+
+# Make "the proofs check" a test target.
+build_test(
+    name = "verify_build_test",
+    targets = [":verify"],
+)

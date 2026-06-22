@@ -129,8 +129,37 @@ quick example.
 ### Large libraries (mathlib): prebuilt oleans
 
 Building mathlib from source is impractical, so ingest its prebuilt `.olean` cache instead of
-compiling it. `lean_olean_archive` downloads an archive of oleans and exposes it via `lean_import`
-(no compilation); point it at oleans produced by `lake exe cache get` + `lake pack`:
+compiling it. Two ways:
+
+**`lean_lake_cache`** (ergonomic) clones a Lake project at a tag/commit, downloads the Lean release
+it pins, runs `lake exe cache get` to fetch the prebuilt oleans for the project *and its transitive
+deps*, and exposes the consolidated result via `lean_import`:
+
+```starlark
+# MODULE.bazel
+mathlib = use_repo_rule("@rules_lean4//lean:deps.bzl", "lean_lake_cache")
+mathlib(
+    name = "mathlib",
+    remote = "https://github.com/leanprover-community/mathlib4",
+    tag = "v4.31.0",      # must match your toolchain version; or pin `commit = "..."`
+    lib_name = "Mathlib",
+)
+```
+
+Then depend on `@mathlib//:Mathlib`. It needs `git` + network at fetch time and GNU coreutils, and
+the cache is several GB — so keep mathlib-backed targets in a separate module (see
+[`examples/mathlib`](examples/mathlib)), not your default `//...` suite. This is exercised by that
+example, which machine-checks a proof (infinitude of primes, `ring`/`nlinarith`) against mathlib.
+
+`lean_lake_cache` also takes `sub_dir` (the Lake project's subdirectory in the repo) and
+`build_targets` (Lake libraries to build *from source* after the cache is fetched — their deps come
+prebuilt, their oleans are included too). Together these ingest a source library that sits on top of
+mathlib: [`examples/aeneas`](examples/aeneas) builds [Aeneas](https://github.com/AeneasVerif/aeneas)'s
+Lean backend (`build_targets = ["Aeneas", "AeneasMeta"]`, `sub_dir = "backends/lean"`) on a cached
+mathlib, so Aeneas-generated Lean (Rust verified in Lean) can be checked with `lean_library`.
+
+**`lean_olean_archive`** (manual) downloads a single olean tarball you host yourself (e.g. from
+`lake exe cache get` + `lake pack`) and exposes it via `lean_import`:
 
 ```starlark
 # MODULE.bazel
@@ -142,22 +171,31 @@ Then depend on `@mathlib_oleans//:oleans`. (`lean_import` also takes loose `.ole
 
 ## Examples / tests
 
-`bazel test //...` runs the full suite under [`tests/`](tests):
+This module registers no Lean toolchain (a consumer chooses the version in their root `MODULE.bazel`),
+so the root suite is only pure-Starlark **Unit** tests ([`tests/unit`](tests/unit): the lakefile
+parser, BUILD generation, and distribution resolver). The toolchain-using tests live in
+[`integration/`](integration) — a separate consumer module that selects the toolchain and is run as a
+nested Bazel via the `//:integration_test` target. So the canonical commands are:
 
-- **Examples** (runnable, self-asserting): building an executable ([`exe`](tests/exe)), machine-checked
-  proofs ([`proof`](tests/proof)), forward FFI via both `ffi_srcs` and `cc_deps` ([`ffi`](tests/ffi)),
-  reverse FFI with C++ ([`reverse_ffi`](tests/reverse_ffi)), a transitive external Lake dependency
-  ([`dep`](tests/dep)), a `lakefile.toml` package loaded via the `lake` extension
-  ([`lake_toml`](tests/lake_toml)), a library fetched from a git tag ([`git_dep`](tests/git_dep)),
-  and a diamond intra-package import graph ([`multi`](tests/multi)).
-- **Unit** ([`unit`](tests/unit)): pure-Starlark tests of the lakefile parser, BUILD generation, and
-  distribution resolver (no toolchain).
-- **Analysis** ([`analysis`](tests/analysis)): provider propagation/dedup, action mnemonics, and an
-  expected-failure case.
-- **Negative** ([`negative`](tests/negative)): targets that must *fail* to build (a false proof, a
-  missing import, an undefined `@[extern]`); asserted by `expect_failures.sh` in CI.
+```sh
+bazel test //... //:integration_test   # root unit tests + the nested toolchain suite
+# or drive the nested workspace directly:
+cd integration && bazel test //...
+```
 
-CI also runs the suite under `--spawn_strategy=sandboxed` (input-completeness), checks build
+Under [`integration/tests/`](integration/tests):
+
+- **Examples** (runnable, self-asserting): building an executable (`exe`), machine-checked proofs
+  (`proof`), forward FFI via both `ffi_srcs` and `cc_deps` (`ffi`), reverse FFI with C++
+  (`reverse_ffi`), a transitive external Lake dependency (`dep`), a `lakefile.toml` package loaded via
+  the `lake` extension (`lake_toml`), a library fetched from a git tag (`git_dep`), a diamond
+  intra-package import graph (`multi`), and a library split into its own target and depended on across
+  the target boundary under a shared namespace (`lib_dep`).
+- **Analysis** (`analysis`): provider propagation/dedup, action mnemonics, and an expected-failure case.
+- **Negative** (`negative`): targets that must *fail* to build (a false proof, a missing import, an
+  undefined `@[extern]`); asserted by `expect_failures.sh` in CI.
+
+CI also runs the nested suite under `--spawn_strategy=sandboxed` (input-completeness), checks build
 determinism, generates the API docs (`//docs:api`), lints with buildifier, and builds the
 [`e2e/`](e2e) module — a separate Bazel module that consumes `rules_lean4` through `bazel_dep` with
 the repo deliberately renamed, catching any generated-BUILD or label that assumes the apparent name.
@@ -207,7 +245,9 @@ lean/
   toolchain.bzl       # lean_toolchain rule + LeanToolchainInfo + toolchain_type
   providers.bzl       # LeanInfo
   private/            # rule implementations + Lean orchestrator scripts
-tests/                # examples + unit / analysis / negative tests
+tests/unit/           # pure-Starlark unit tests (the only toolchain-free suite; root module)
+integration/          # consumer module: the toolchain-using tests, run via //:integration_test
 e2e/                  # separate module that consumes rules_lean4 as a renamed external dep
+examples/             # mathlib + Aeneas examples (heavy, separate modules)
 docs/                 # stardoc API-doc target
 ```

@@ -10,3 +10,10 @@ filegroup(
     name = "bzl_files",
     srcs = glob(["*.bzl"]),
 )
+
+# Every source file in this package, for staging rules_lean4 into the integration test's sandbox.
+filegroup(
+    name = "all_files",
+    srcs = glob(["**"]),
+    visibility = ["//visibility:public"],
+)
