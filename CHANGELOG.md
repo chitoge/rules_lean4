@@ -3,7 +3,7 @@
 All notable changes to `rules_lean4` are documented here. This project adheres to
 [Semantic Versioning](https://semver.org).
 
-## Unreleased
+## 0.2.0 — 2026-06-18
 
 - Default Lean toolchain is now **4.31.0** (4.30.0 remains checksum-pinned and selectable). Because
   Lean has no cross-version source/olean compatibility, the example dependencies were bumped to
@@ -18,13 +18,11 @@ All notable changes to `rules_lean4` are documented here. This project adheres t
 - **New: `lean_lake_cache`** repository rule — ingest a mathlib-scale library's prebuilt olean cache
   the way Lake users do: clone the project, download the Lean release it pins, run `lake exe cache
   get`, and expose the consolidated oleans via `lean_import`. See [`examples/mathlib`](examples/mathlib),
-  a separate module that machine-checks a proof against mathlib. `lean_lake_cache` also takes
-  `sub_dir` (the Lake project's subdirectory) and `build_targets` (Lake libraries to build *from
-  source* on top of the fetched cache) — together they ingest a source library that sits on mathlib.
-  [`examples/aeneas`](examples/aeneas) uses them to build [Aeneas](https://github.com/AeneasVerif/aeneas)'s
-  Lean backend on a cached mathlib, so Aeneas-generated Lean (Rust verified in Lean) can be checked.
-- Added the `4.30.0-rc2` Lean release to the distribution table (checksum-pinned, selectable) for the
-  Aeneas example, which tracks that release candidate.
+  a separate module that machine-checks a proof against mathlib. It also takes `sub_dir` (the Lake
+  project's subdirectory) and `build_targets` (Lake libraries to build *from source* on top of the
+  fetched cache) for ingesting a source library that sits on a cached dependency stack.
+- Added the `4.30.0-rc2` Lean release to the distribution table (checksum-pinned, selectable) for
+  projects that pin a prerelease.
 - **Fix:** rules_lean4 no longer registers a Lean toolchain as a normal dependency — its own
   selection (for its tests) is now a `dev_dependency`. The toolchain version is the consumer's single
   choice in their root `MODULE.bazel`; previously rules_lean4's pin leaked into consumers and could

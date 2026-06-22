@@ -13,7 +13,7 @@ module(
     version = "0.0.0",
 )
 
-bazel_dep(name = "rules_lean4", version = "0.1.0", repo_name = "renamed_lean")
+bazel_dep(name = "rules_lean4", version = "0.2.0", repo_name = "renamed_lean")
 local_path_override(
     module_name = "rules_lean4",
     path = "..",

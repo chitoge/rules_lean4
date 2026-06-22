@@ -2,7 +2,7 @@
 
 module(
     name = "rules_lean4",
-    version = "0.1.0",
+    version = "0.2.0",
     bazel_compatibility = [">=9.0.0"],  # loads CcInfo/cc_common from rules_cc (moved out of globals in 9.x)
 )
 

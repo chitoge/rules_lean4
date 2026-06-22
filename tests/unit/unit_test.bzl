@@ -99,7 +99,7 @@ def _distribution_cases(ctx):
     asserts.true(env, urls2[0].endswith("lean-4.30.0-darwin_aarch64.tar.zst"), "darwin arm url")
     asserts.equals(env, "lean-4.30.0-darwin_aarch64", strip2)
 
-    # 4.31.0 (default) and 4.30.0-rc2 (Aeneas) are checksum-pinned on every platform.
+    # 4.31.0 (default) and 4.30.0-rc2 (a prerelease) are checksum-pinned on every platform.
     for version in ["4.31.0", "4.30.0-rc2"]:
         for plat in ["linux-x86_64", "linux-aarch64", "darwin-x86_64", "darwin-aarch64"]:
             _urls, shav, _strip = distribution(version, plat)

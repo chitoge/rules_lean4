@@ -183,7 +183,8 @@ def _lean_lake_cache_impl(rctx):
         if res.return_code != 0:
             fail("git checkout %s failed:\n%s" % (rctx.attr.commit, res.stderr))
 
-    # The Lake project may live in a subdirectory of the repo (e.g. aeneas's backends/lean).
+    # The Lake project may live in a subdirectory of the repo (its lakefile / lean-toolchain are
+    # under `sub_dir` rather than the repo root).
     proj = "src/" + rctx.attr.sub_dir if rctx.attr.sub_dir else "src"
 
     # 2. Download the Lean release the project pins (for its lake/lean/leantar).
@@ -208,7 +209,7 @@ def _lean_lake_cache_impl(rctx):
         fail("`lake exe cache get` failed (rc=%d):\n%s\n%s" % (res.return_code, res.stdout, res.stderr))
 
     # 3b. Optionally build the project's own libraries from source (their deps come prebuilt from the
-    # cache above), so their oleans are included too — e.g. Aeneas on top of a cached mathlib.
+    # cache above), so their oleans are included too — e.g. a library that sits on top of mathlib.
     if rctx.attr.build_targets:
         res = rctx.execute(
             [rctx.path("toolchain/bin/lake"), "build"] + rctx.attr.build_targets,
@@ -245,9 +246,10 @@ lean_lake_cache = repository_rule(
         "tag": attr.string(doc = "Tag to fetch (e.g. v4.31.0). Set exactly one of `tag` / `commit`."),
         "commit": attr.string(doc = "Commit to fetch (most reproducible). Set exactly one of `tag` / `commit`."),
         "sub_dir": attr.string(doc = "Lake project subdirectory within the repo (e.g. `backends/lean`); default repo root."),
-        "build_targets": attr.string_list(doc = "Lake targets to build from source after `cache get` " +
+        "build_targets": attr.string_list(doc = "Lake libraries to build from source after `cache get` " +
                                                 "(their deps come prebuilt from the cache); their oleans " +
-                                                "are included too, e.g. `[\"Aeneas\", \"AeneasMeta\"]`."),
+                                                "are included too. For ingesting a source library on a " +
+                                                "cached dependency stack."),
         "lib_name": attr.string(default = "oleans", doc = "Generated lean_import target name (`@<name>//:<lib_name>`)."),
         "timeout": attr.int(default = 1800, doc = "Seconds allowed for `lake exe cache get` (mathlib downloads GBs)."),
     },
